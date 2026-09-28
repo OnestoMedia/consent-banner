@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>om-consent demo</title>
+<script>
+  const q = new URLSearchParams(location.search);
+  document.documentElement.lang = q.get('lang') || 'nl';
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  window.__demoData = {
+    privacyUrl: 'https://example.com/privacy', formal: q.get('formal') || 'je', fallbackLang: 'en',
+    accent: '#2D6A4F', bg: '#FFFFFF', text: '#1A1A1A', radius: '12', font: '',
+    layout: q.get('layout') || 'bar', weight: q.get('weight') || 'accept',
+    regions: '', waitForUpdate: '500', adsDataRedaction: true, cookieDomain: '',
+    expiresDays: '365', revision: q.get('revision') || '1', version: '1'
+  };
+</script>
+<script src="/demo/shim.js"></script>
+</head>
+<body>
+  <main><h1>Demo webshop</h1><p>Voorbeeldpagina.</p></main>
+  <footer><a href="#" data-om-consent-open id="open">Cookie-instellingen</a></footer>
+  <script>dataLayer.push({event: 'demo_page_ready'});</script>
+</body>
+</html>
