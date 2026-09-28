@@ -23,7 +23,7 @@
     { "type": "CHECKBOX", "name": "adsDataRedaction", "checkboxText": "Advertentiedata redigeren", "simpleValueType": true, "defaultValue": true },
     { "type": "TEXT", "name": "cookieDomain", "displayName": "Cookie-domein (bijv. .klant.nl)", "simpleValueType": true, "defaultValue": "" },
     { "type": "TEXT", "name": "expiresDays", "displayName": "Geldigheid keuze (dagen)", "simpleValueType": true, "defaultValue": "365" },
-    { "type": "TEXT", "name": "revision", "displayName": "Revisie (ophogen = opnieuw vragen)", "simpleValueType": true, "defaultValue": "1" }
+    { "type": "TEXT", "name": "revision", "displayName": "Revisie (ophogen = opnieuw vragen)", "simpleValueType": true, "defaultValue": "1", "valueValidators": [{ "type": "POSITIVE_NUMBER" }] }
   ]},
   { "type": "GROUP", "name": "grpTech", "displayName": "Techniek", "groupStyle": "ZIPPY_CLOSED", "subParams": [
     { "type": "TEXT", "name": "version", "displayName": "Scriptversie (1 of 1.2.3)", "simpleValueType": true, "defaultValue": "1" }

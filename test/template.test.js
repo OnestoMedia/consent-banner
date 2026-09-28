@@ -61,8 +61,26 @@ describe('template code', () => {
     const { calls } = run({ ...base, accent: '#077668', layout: 'bar', weight: 'accept', formal: 'u' });
     const [key, value, overwrite] = calls.setInWindow[0];
     expect(key).toBe('omConsentConfig');
-    expect(value).toMatchObject({ privacyUrl: 'https://x.nl/privacy', accent: '#077668', formal: 'u', revision: '1' });
+    expect(value).toMatchObject({ privacyUrl: 'https://x.nl/privacy', accent: '#077668', formal: 'u', revision: 1 });
     expect(overwrite).toBe(true);
+  });
+  test('revision "0" normalizes to 1 and still restores an r1 cookie', () => {
+    const { calls } = run({ ...base, revision: '0' }, { cookies: ['r1.a1.m0'] });
+    expect(calls.setInWindow[0][1].revision).toBe(1);
+    expect(calls.updateConsentState[0][0]).toEqual({
+      ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted',
+    });
+  });
+  test('revision "1.5" normalizes to 1 and still restores an r1 cookie', () => {
+    const { calls } = run({ ...base, revision: '1.5' }, { cookies: ['r1.a1.m0'] });
+    expect(calls.setInWindow[0][1].revision).toBe(1);
+    expect(calls.updateConsentState[0][0]).toEqual({
+      ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted',
+    });
+  });
+  test('revision "abc" normalizes to 1', () => {
+    const { calls } = run({ ...base, revision: 'abc' });
+    expect(calls.setInWindow[0][1].revision).toBe(1);
   });
   test('pinned version', () => {
     const { calls } = run({ ...base, version: '1.2.3' });

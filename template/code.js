@@ -46,8 +46,14 @@ function isVersion(v) {
   return true;
 }
 
-var revision = makeNumber(data.revision || 1);
-if (!(revision >= 1)) revision = 1;
+// Same grammar as src/config.js normalizeConfig: digits only, no leading zero, else 1.
+function normalizeRevision(v) {
+  var s = makeString(v || '');
+  if (isDigits(s) && s.charAt(0) !== '0') return makeNumber(s);
+  return 1;
+}
+
+var revision = normalizeRevision(data.revision);
 
 var defaults = stateFor(false, false);
 defaults.functionality_storage = 'granted';
@@ -75,7 +81,7 @@ setInWindow('omConsentConfig', {
   privacyUrl: data.privacyUrl, formal: data.formal, fallbackLang: data.fallbackLang,
   accent: data.accent, bg: data.bg, text: data.text, radius: data.radius, font: data.font,
   layout: data.layout, weight: data.weight, cookieDomain: data.cookieDomain,
-  expiresDays: data.expiresDays, revision: data.revision
+  expiresDays: data.expiresDays, revision: revision
 }, true);
 
 var version = data.version && isVersion(data.version) ? makeString(data.version) : '1';
