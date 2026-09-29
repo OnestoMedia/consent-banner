@@ -1,5 +1,5 @@
 scenarios:
-- name: Default denied, script injected
+- name: Default denied, script injected, tag completes
   code: |-
     mock('getCookieValues', function () { return []; });
     runCode(mockData);
@@ -11,11 +11,36 @@ scenarios:
   code: |-
     mock('getCookieValues', function () { return ['r1.a1.m0']; });
     runCode(mockData);
+    assertApi('getCookieValues').wasCalledWith('om_consent', false);
     assertApi('updateConsentState').wasCalledWith({ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted'});
 - name: Malformed cookie ignored
   code: |-
     mock('getCookieValues', function () { return ['r1.a2.m0']; });
     runCode(mockData);
+    assertApi('updateConsentState').wasNotCalled();
+- name: Duplicate cookies, revocation wins
+  code: |-
+    mock('getCookieValues', function () { return ['r1.a1.m1', 'r1.a0.m0']; });
+    runCode(mockData);
+    assertApi('updateConsentState').wasCalledWith({ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied'});
+- name: Duplicate cookies, invalid copy ignored
+  code: |-
+    mock('getCookieValues', function () { return ['r1.a1.m0', 'rX']; });
+    runCode(mockData);
+    assertApi('updateConsentState').wasCalledWith({ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted'});
+- name: Invalid wait_for_update falls back to 500
+  code: |-
+    mock('getCookieValues', function () { return []; });
+    runCode({privacyUrl: 'https://example.com/privacy', revision: '1', waitForUpdate: 'abc', version: '1', adsDataRedaction: true});
+    assertApi('setDefaultConsentState').wasCalledWith({ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied', functionality_storage: 'granted', security_storage: 'granted', wait_for_update: 500});
+- name: Script load failure only logs, tag still completes, consent stays denied
+  code: |-
+    mock('getCookieValues', function () { return []; });
+    mock('injectScript', function (url, onSuccess, onFailure) { onFailure(); });
+    runCode(mockData);
+    assertApi('gtmOnSuccess').wasCalled();
+    assertApi('gtmOnFailure').wasNotCalled();
+    assertApi('logToConsole').wasCalled();
     assertApi('updateConsentState').wasNotCalled();
 setup: |-
   const mockData = {privacyUrl: 'https://example.com/privacy', revision: '1', waitForUpdate: '500', version: '1', adsDataRedaction: true};

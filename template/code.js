@@ -39,6 +39,24 @@ function decode(value) {
   return { revision: makeNumber(rev), analytics: a === '1', marketing: m === '1' };
 }
 
+// After a cookie-domain change a browser can hold several om_consent cookies (host-only
+// + domain). Read them all, raw (no URL-decoding). Only values of the current revision
+// or newer count, and a category is granted only when EVERY one of them grants it:
+// a revocation stored in any copy wins. No valid value → nothing is restored.
+function restoreFrom(values, minRevision) {
+  var found = false;
+  var analytics = true;
+  var marketing = true;
+  for (var j = 0; j < values.length; j++) {
+    var c = decode(values[j]);
+    if (!c || c.revision < minRevision) continue;
+    found = true;
+    if (!c.analytics) analytics = false;
+    if (!c.marketing) marketing = false;
+  }
+  return found ? { analytics: analytics, marketing: marketing } : null;
+}
+
 function isVersion(v) {
   var parts = makeString(v).split('.');
   if (parts.length > 3) return false;
@@ -58,7 +76,10 @@ var revision = normalizeRevision(data.revision);
 var defaults = stateFor(false, false);
 defaults.functionality_storage = 'granted';
 defaults.security_storage = 'granted';
-defaults.wait_for_update = makeNumber(data.waitForUpdate || 500);
+// Empty → 500; makeNumber('abc') is NaN and a negative wait is meaningless: also 500.
+var wait = makeNumber(data.waitForUpdate || 500);
+if (!(wait >= 0)) wait = 500;
+defaults.wait_for_update = wait;
 if (data.regions) {
   var regions = [];
   var raw = makeString(data.regions).split(',');
@@ -71,9 +92,9 @@ if (data.regions) {
 setDefaultConsentState(defaults);
 if (data.adsDataRedaction !== false) gtagSet('ads_data_redaction', true);
 
-var stored = getCookieValues('om_consent');
-var prev = stored && stored.length > 0 ? decode(stored[0]) : null;
-if (prev && prev.revision >= revision) {
+var stored = getCookieValues('om_consent', false) || [];
+var prev = restoreFrom(stored, revision);
+if (prev) {
   updateConsentState(stateFor(prev.analytics, prev.marketing));
 }
 
@@ -86,7 +107,9 @@ setInWindow('omConsentConfig', {
 
 var version = data.version && isVersion(data.version) ? makeString(data.version) : '1';
 var url = 'https://cdn.jsdelivr.net/gh/OnestoMedia/consent-banner@' + version + '/dist/om-consent.min.js';
-injectScript(url, data.gtmOnSuccess, function () {
+// Defaults (and any restored choice) are set; finish the tag now. Waiting for the CDN
+// would hold back every other tag on this event until the script loads or times out.
+data.gtmOnSuccess();
+injectScript(url, function () {}, function () {
   log('OnestoMedia Consent: script failed to load, consent stays denied', url);
-  data.gtmOnFailure();
 }, 'om-consent');

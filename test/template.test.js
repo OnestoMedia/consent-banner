@@ -7,19 +7,27 @@ const code = readFileSync(new URL('../template/code.js', import.meta.url), 'utf8
 
 function run(data, { cookies = [], injectOk = true } = {}) {
   const calls = {};
+  const outcome = {};
   const rec = (name, ret) => (...args) => { (calls[name] ||= []).push(args); return ret; };
   const apis = {
     setDefaultConsentState: rec('setDefaultConsentState'),
     updateConsentState: rec('updateConsentState'),
-    getCookieValues: rec('getCookieValues', cookies),
+    // Like GTM: URL-decodes unless the second argument is false.
+    getCookieValues: (...args) => {
+      (calls.getCookieValues ||= []).push(args);
+      return args[1] === false ? cookies.slice() : cookies.map((c) => decodeURIComponent(c));
+    },
     setInWindow: rec('setInWindow', true),
     gtagSet: rec('gtagSet'),
     logToConsole: rec('logToConsole'),
     makeNumber: (v) => Number(v),
     makeString: (v) => String(v),
-    injectScript: (url, ok, fail) => { (calls.injectScript ||= []).push([url]); (injectOk ? ok : fail)(); },
+    injectScript: (url, ok, fail, cacheToken) => {
+      (calls.injectScript ||= []).push([url, cacheToken]);
+      outcome.successBeforeInject = outcome.success === true;
+      (injectOk ? ok : fail)();
+    },
   };
-  const outcome = {};
   const full = { gtmOnSuccess: () => (outcome.success = true), gtmOnFailure: () => (outcome.failure = true), ...data };
   new Function('require', 'data', code)((n) => { if (!apis[n]) throw new Error('unexpected require ' + n); return apis[n]; }, full);
   return { calls, outcome };
@@ -86,10 +94,58 @@ describe('template code', () => {
     const { calls } = run({ ...base, version: '1.2.3' });
     expect(calls.injectScript[0][0]).toContain('consent-banner@1.2.3/');
   });
-  test('script load failure → gtmOnFailure, defaults stay denied', () => {
+  test('tag completes before the script loads (does not wait for the CDN)', () => {
+    const { calls, outcome } = run(base);
+    expect(outcome.successBeforeInject).toBe(true);
+    expect(calls.injectScript[0][1]).toBe('om-consent');
+    expect(outcome.failure).toBeUndefined();
+  });
+  test('script load failure → still gtmOnSuccess, only logs, defaults stay denied', () => {
     const { calls, outcome } = run(base, { injectOk: false });
-    expect(outcome.failure).toBe(true);
+    expect(outcome.success).toBe(true);
+    expect(outcome.failure).toBeUndefined();
+    expect(calls.logToConsole).toHaveLength(1);
+    expect(calls.logToConsole[0][0]).toContain('failed to load');
     expect(calls.setDefaultConsentState).toHaveLength(1);
+    expect(calls.setDefaultConsentState[0][0]).toMatchObject({ analytics_storage: 'denied', ad_storage: 'denied' });
+    expect(calls.updateConsentState).toBeUndefined();
+  });
+  test.each([['abc'], ['-5'], [''], [undefined]])('waitForUpdate %o falls back to 500', (w) => {
+    const { calls } = run({ ...base, waitForUpdate: w });
+    expect(calls.setDefaultConsentState[0][0].wait_for_update).toBe(500);
+  });
+  test('waitForUpdate "0" is kept', () => {
+    const { calls } = run({ ...base, waitForUpdate: '0' });
+    expect(calls.setDefaultConsentState[0][0].wait_for_update).toBe(0);
+  });
+  test('reads om_consent raw (no URL-decoding)', () => {
+    const { calls } = run(base);
+    expect(calls.getCookieValues[0]).toEqual(['om_consent', false]);
+  });
+  test('duplicate cookies: a revocation in any copy wins', () => {
+    const { calls } = run(base, { cookies: ['r1.a1.m1', 'r1.a0.m0'] });
+    expect(calls.updateConsentState[0][0]).toEqual({
+      ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied',
+    });
+  });
+  test('duplicate cookies: order does not matter', () => {
+    const { calls } = run(base, { cookies: ['r1.a0.m1', 'r1.a1.m1'] });
+    expect(calls.updateConsentState[0][0]).toEqual({
+      ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'denied',
+    });
+  });
+  test('duplicate cookies: invalid copies are ignored', () => {
+    const { calls } = run(base, { cookies: ['r1.a1.m0', 'rX'] });
+    expect(calls.updateConsentState[0][0]).toEqual({
+      ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted',
+    });
+  });
+  test('duplicate cookies: stale-revision copies are ignored', () => {
+    const { calls } = run({ ...base, revision: '2' }, { cookies: ['r1.a0.m0', 'r2.a1.m1'] });
+    expect(calls.updateConsentState[0][0]).toMatchObject({ analytics_storage: 'granted', ad_storage: 'granted' });
+  });
+  test('duplicate cookies: no valid copy → no restore', () => {
+    const { calls } = run({ ...base, revision: '2' }, { cookies: ['r1.a1.m1', 'garbage'] });
     expect(calls.updateConsentState).toBeUndefined();
   });
   test('invalid version string falls back to 1', () => {

@@ -67,10 +67,27 @@ test('revision bump asks again', async ({ page }) => {
   expect(calls.filter(([t]) => t === 'update')).toHaveLength(0);
 });
 
-test('bundle cannot load → no banner, still denied, failure reported', async ({ page }) => {
+test('tag completes without waiting for the bundle', async ({ page }) => {
+  let release;
+  const held = new Promise((r) => (release = r));
+  await page.route('**/dist/om-consent.min.js', async (r) => { await held; await r.continue(); });
+  await page.goto('/demo/index.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__omTagDone === true);
+  expect(await page.evaluate(() => typeof window.omConsent)).toBe('undefined');
+  release();
+  await expect(page.locator('#cc-main')).toContainText('Cookies op deze site');
+});
+
+test('bundle cannot load → tag still completes, no banner, still denied, failure logged', async ({ page }) => {
   await page.route('**/dist/om-consent.min.js', (r) => r.abort());
   await page.goto('/demo/index.html');
   await page.waitForFunction(() => window.__omFailed === true);
-  expect((await consentCalls(page)).filter(([t]) => t === 'update')).toHaveLength(0);
+  const state = await page.evaluate(() => ({ done: window.__omTagDone, failed: window.__omTagFailed, logs: window.__omLogs }));
+  expect(state.done).toBe(true);
+  expect(state.failed).toBeUndefined();
+  expect(state.logs).toEqual([expect.stringContaining('script failed to load, consent stays denied')]);
+  const calls = await consentCalls(page);
+  expect(calls[0]).toEqual(['default', expect.objectContaining({ analytics_storage: 'denied', ad_storage: 'denied' })]);
+  expect(calls.filter(([t]) => t === 'update')).toHaveLength(0);
   await expect(page.locator('#cc-main')).toHaveCount(0);
 });
