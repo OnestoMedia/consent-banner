@@ -13,7 +13,7 @@ export default [
   perm('access_consent', { consentTypes: list(CONSENT_TYPES.map((t) => map({ consentType: str(t), read: bool(true), write: bool(true) }))) }),
   perm('get_cookies', { cookieAccess: str('specific'), cookieNames: list([str('om_consent')]) }),
   perm('inject_script', { urls: list([str('https://cdn.jsdelivr.net/gh/OnestoMedia/consent-banner@*')]) }),
-  perm('access_globals', { keys: list([map({ key: str('omConsentConfig'), read: bool(false), write: bool(true), execute: bool(false) })]) }),
+  perm('access_globals', { keys: list([map({ key: str('omConsentConfig'), read: bool(true), write: bool(true), execute: bool(false) })]) }),
   perm('write_data_layer', { keyPatterns: list([str('ads_data_redaction')]) }),
   perm('logging', { environments: str('debug') }),
 ];
