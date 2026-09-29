@@ -1,0 +1,12 @@
+[
+  { "value": "r1.a1.m0", "expected": { "analytics": true, "marketing": false, "revision": 1 } },
+  { "value": "r3.a0.m1", "expected": { "analytics": false, "marketing": true, "revision": 3 } },
+  { "value": "r12.a1.m1", "expected": { "analytics": true, "marketing": true, "revision": 12 } },
+  { "value": "", "expected": null },
+  { "value": "r1.a1", "expected": null },
+  { "value": "rX.a1.m0", "expected": null },
+  { "value": "r1.a2.m0", "expected": null },
+  { "value": "r0.a1.m0", "expected": null },
+  { "value": "r1%2Ea1%2Em0", "expected": null },
+  { "value": "r1.a1.m0.x", "expected": null }
+]

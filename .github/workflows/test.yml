@@ -11,5 +11,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run build:template
+      - name: committed template is up to date
+        run: git diff --exit-code template/om-consent.tpl
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e

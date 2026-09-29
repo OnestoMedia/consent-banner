@@ -1,0 +1,31 @@
+[
+  { "type": "GROUP", "name": "grpClient", "displayName": "Klant", "groupStyle": "ZIPPY_OPEN", "subParams": [
+    { "type": "TEXT", "name": "privacyUrl", "displayName": "Privacy-URL", "simpleValueType": true, "valueValidators": [{ "type": "NON_EMPTY" }] },
+    { "type": "SELECT", "name": "formal", "displayName": "Aanspreekvorm NL", "simpleValueType": true, "defaultValue": "je",
+      "selectItems": [{ "value": "je", "displayValue": "je" }, { "value": "u", "displayValue": "u" }] },
+    { "type": "SELECT", "name": "fallbackLang", "displayName": "Terugvaltaal", "simpleValueType": true, "defaultValue": "en",
+      "selectItems": [{ "value": "en", "displayValue": "Engels" }, { "value": "nl", "displayValue": "Nederlands" }, { "value": "de", "displayValue": "Duits" }, { "value": "fr", "displayValue": "Frans" }] }
+  ]},
+  { "type": "GROUP", "name": "grpStyle", "displayName": "Stijl (uit tokens.json van de klant)", "groupStyle": "ZIPPY_OPEN", "subParams": [
+    { "type": "TEXT", "name": "accent", "displayName": "Accentkleur (#hex)", "simpleValueType": true, "defaultValue": "#2D6A4F" },
+    { "type": "TEXT", "name": "bg", "displayName": "Achtergrond (#hex)", "simpleValueType": true, "defaultValue": "#FFFFFF" },
+    { "type": "TEXT", "name": "text", "displayName": "Tekstkleur (#hex)", "simpleValueType": true, "defaultValue": "#1A1A1A" },
+    { "type": "TEXT", "name": "radius", "displayName": "Afronding (px)", "simpleValueType": true, "defaultValue": "12", "valueValidators": [{ "type": "NON_NEGATIVE_NUMBER" }] },
+    { "type": "TEXT", "name": "font", "displayName": "Lettertype (leeg = van de site)", "simpleValueType": true, "defaultValue": "" },
+    { "type": "SELECT", "name": "layout", "displayName": "Vorm", "simpleValueType": true, "defaultValue": "bar",
+      "selectItems": [{ "value": "bar", "displayValue": "Balk onderaan" }, { "value": "card", "displayValue": "Kaart linksonder" }, { "value": "modal", "displayValue": "Venster midden" }] },
+    { "type": "SELECT", "name": "weight", "displayName": "Knopgewicht", "simpleValueType": true, "defaultValue": "accept",
+      "selectItems": [{ "value": "accept", "displayValue": "Accepteren benadrukt (standaard)" }, { "value": "equal", "displayValue": "Gelijkwaardig" }] }
+  ]},
+  { "type": "GROUP", "name": "grpBehaviour", "displayName": "Gedrag", "groupStyle": "ZIPPY_CLOSED", "subParams": [
+    { "type": "TEXT", "name": "regions", "displayName": "Regio's met default denied (ISO, komma's; leeg = overal)", "simpleValueType": true, "defaultValue": "" },
+    { "type": "TEXT", "name": "waitForUpdate", "displayName": "wait_for_update (ms)", "simpleValueType": true, "defaultValue": "500", "valueValidators": [{ "type": "NON_NEGATIVE_NUMBER" }] },
+    { "type": "CHECKBOX", "name": "adsDataRedaction", "checkboxText": "Advertentiedata redigeren", "simpleValueType": true, "defaultValue": true },
+    { "type": "TEXT", "name": "cookieDomain", "displayName": "Cookie-domein (bijv. .klant.nl)", "simpleValueType": true, "defaultValue": "" },
+    { "type": "TEXT", "name": "expiresDays", "displayName": "Geldigheid keuze (dagen)", "simpleValueType": true, "defaultValue": "365", "valueValidators": [{ "type": "NON_NEGATIVE_NUMBER" }] },
+    { "type": "TEXT", "name": "revision", "displayName": "Revisie (ophogen = opnieuw vragen)", "simpleValueType": true, "defaultValue": "1", "valueValidators": [{ "type": "POSITIVE_NUMBER" }] }
+  ]},
+  { "type": "GROUP", "name": "grpTech", "displayName": "Techniek", "groupStyle": "ZIPPY_CLOSED", "subParams": [
+    { "type": "TEXT", "name": "version", "displayName": "Scriptversie (1 of 1.2.3)", "simpleValueType": true, "defaultValue": "1" }
+  ]}
+]

@@ -1,0 +1,11 @@
+/* weight "accept": reject becomes a text link on the first layer only */
+.omc-accept #cc-main .cm__btn[data-role="necessary"],
+.omc-accept #cc-main .cm__btn[data-role="necessary"]:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--cc-primary-color);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* keep the site's font sizes sane when inheriting */
+#cc-main { font-size: 15px; line-height: 1.5; }
