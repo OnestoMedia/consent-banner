@@ -166,4 +166,9 @@ test('assembled .tpl has every section and valid JSON blocks', () => {
   const names = params.flatMap((g) => g.subParams.map((p) => p.name));
   expect(names).toEqual(['privacyUrl', 'formal', 'fallbackLang', 'accent', 'bg', 'text', 'radius', 'font', 'layout', 'weight', 'regions', 'waitForUpdate', 'adsDataRedaction', 'cookieDomain', 'expiresDays', 'revision', 'version']);
   expect(JSON.parse(block('WEB_PERMISSIONS')).map((p) => p.instance.key.publicId)).toContain('inject_script');
+  // setInWindow(key, value, true) needs read AND write on the key in real GTM ("Prohibited readwrite").
+  const globals = JSON.parse(block('WEB_PERMISSIONS')).find((p) => p.instance.key.publicId === 'access_globals');
+  const entry = globals.instance.param[0].value.listItem[0];
+  const flags = Object.fromEntries(entry.mapKey.map((k, i) => [k.string, entry.mapValue[i].boolean ?? entry.mapValue[i].string]));
+  expect(flags).toMatchObject({ key: 'omConsentConfig', read: true, write: true, execute: false });
 });
