@@ -67,6 +67,27 @@ describe('robustness', () => {
     expect(cookie('om_consent')).toBe('r1.a1.m1');
     expect(consentUpdates().at(-1)[2]).toMatchObject({ analytics_storage: 'granted' });
   });
+  test('om_consent disagreeing with om_cc (same revision) → re-applied from om_cc', async () => {
+    await boot();
+    document.querySelector('#cc-main .cm__btn[data-role="all"]').click();
+    await flush();
+    document.cookie = 'om_consent=r1.a0.m0; Path=/';
+    document.getElementById('cc-main')?.remove();
+    delete window.omConsent;
+    await boot();
+    expect(cookie('om_consent')).toBe('r1.a1.m1');
+    expect(consentUpdates().at(-1)[2]).toMatchObject({ analytics_storage: 'granted', ad_storage: 'granted' });
+  });
+  test('om_consent in sync with om_cc → no extra update on load', async () => {
+    await boot();
+    document.querySelector('#cc-main .cm__btn[data-role="necessary"]').click();
+    await flush();
+    document.getElementById('cc-main')?.remove();
+    delete window.omConsent;
+    await boot();
+    expect(consentUpdates()).toHaveLength(0);
+    expect(cookie('om_consent')).toBe('r1.a0.m0');
+  });
   test('data-om-consent-open opens preferences', async () => {
     await boot();
     document.getElementById('open').click();
@@ -74,4 +95,23 @@ describe('robustness', () => {
     expect(document.querySelector('#cc-main .pm')).not.toBeNull();
     expect(document.documentElement.classList.contains('show--preferences')).toBe(true);
   });
+});
+
+describe('CookieConsent.run failure', () => {
+  const failing = (impl) => async () => {
+    // Under jsdom the package resolves to its UMD build (exports on `default`).
+    vi.doMock('vanilla-cookieconsent', async (orig) => { const m = await orig(); return { ...(m.default || m), run: impl }; });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(boot()).resolves.toMatchObject({ started: true });
+      expect(err).toHaveBeenCalledWith(expect.stringContaining('[om-consent]'), expect.any(Error));
+      expect(consentUpdates()).toHaveLength(0);
+      expect(cookie('om_consent')).toBeUndefined();
+    } finally {
+      err.mockRestore();
+      vi.doUnmock('vanilla-cookieconsent');
+    }
+  };
+  test('a synchronous throw does not escape start()', failing(() => { throw new Error('boom'); }));
+  test('a rejected run() is caught', failing(() => Promise.reject(new Error('boom'))));
 });

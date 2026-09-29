@@ -44,10 +44,21 @@ export function start(win = window, doc = document) {
     win.dataLayer.push({ event: 'om_consent_update', om_consent: { ...choice } });
     writeCookie(doc, win, encodeCookie(choice), config);
   };
-  const repairIfMissing = () => {
+  // om_cc (CookieConsent) is the source of truth for the choice; om_consent is what the GTM
+  // template reads on the next page. Re-apply when om_consent is missing, stale, or disagrees.
+  const repairIfOutOfSync = () => {
     const stored = readCookie(doc);
-    if (!stored || stored.revision !== config.revision) apply();
+    if (!stored || stored.revision !== config.revision
+      || stored.analytics !== CookieConsent.acceptedCategory('analytics')
+      || stored.marketing !== CookieConsent.acceptedCategory('marketing')) apply();
   };
+
+  // With a cookie domain, host-only copies left from before (e.g. the domain was set later)
+  // would shadow the domain cookies: readers take the first value, so a newer choice could be
+  // ignored. Expire the host-only copies (no Domain attribute) before CookieConsent reads om_cc.
+  if (config.cookieDomain) {
+    for (const name of [COOKIE_NAME, 'om_cc']) doc.cookie = `${name}=; Max-Age=0; Path=/`;
+  }
 
   // vanilla-cookieconsent guards re-init with a flag on `win`, not on its own module
   // state. In a real browser that's fine (`start()` runs once per page load), but it
@@ -56,7 +67,15 @@ export function start(win = window, doc = document) {
   // for "already booted in this window", so anything short of that should get a clean
   // slate before `run()`.
   CookieConsent.reset();
-  CookieConsent.run(buildRunOptions(config, { onFirstConsent: apply, onChange: apply, onConsent: repairIfMissing }));
+  // Never break the host page: consent simply stays as the template set it (denied or
+  // restored). run() is async, so catch both a synchronous throw and a rejection.
+  const failed = (e) => console.error('[om-consent] banner failed to start, consent left unchanged', e);
+  try {
+    const running = CookieConsent.run(buildRunOptions(config, { onFirstConsent: apply, onChange: apply, onConsent: repairIfOutOfSync }));
+    if (running && typeof running.catch === 'function') running.catch(failed);
+  } catch (e) {
+    failed(e);
+  }
 
   doc.addEventListener('click', (e) => {
     const t = e.target && e.target.closest ? e.target.closest('[data-om-consent-open]') : null;
